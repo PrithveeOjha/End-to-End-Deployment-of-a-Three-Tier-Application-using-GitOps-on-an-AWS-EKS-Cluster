@@ -1,181 +1,128 @@
-# End-to-End-Deployment-of-a-Three-Tier-Application-using-GitOps-on-an-AWS-EKS-Cluster
+# Three Tier Architecture Deployment on AWS EKS
 
-## 1\. Understanding the Core Concepts
+Stan's Robot Shop is a sample microservice application you can use as a sandbox to test and learn containerised application orchestration and monitoring techniques. It is not intended to be a comprehensive reference example of how to write a microservices application, although you will better understand some of those concepts by playing with Stan's Robot Shop. To be clear, the error handling is patchy and there is not any security built into the application.
 
-Before diving into the project, let's understand some key terms:
+You can get more detailed information from my [blog post](https://www.instana.com/blog/stans-robot-shop-sample-microservice-application/) about this sample microservice application.
 
-  * **Three-Tier Application**: This is an application architecture with three logical and physical computing tiers:
-      * **Presentation Tier (Frontend)**: The user interface (e.g., a website built with ReactJS).
-      * **Application Tier (Backend)**: The logic that processes user requests and interacts with the data tier (e.g., an API built with NodeJS).
-      * **Data Tier (Database)**: Where the application's data is stored (e.g., MongoDB).
-  * **DevOps**: A set of practices that combines software development (Dev) and IT operations (Ops) to shorten the systems development life cycle and provide continuous delivery with high software quality.
-  * **GitOps**: An operational framework that takes DevOps best practices like version control, collaboration, compliance, and CI/CD, and applies them to infrastructure automation. It uses Git as the single source of truth for declarative infrastructure and applications.
-  * **Containerization (Docker)**: Packaging an application and all its dependencies into a standardized unit called a container. **Docker** is a popular tool for this.
-  * **Kubernetes (AWS EKS)**: An open-source system for automating deployment, scaling, and management of containerized applications. **AWS EKS (Elastic Kubernetes Service)** is a managed Kubernetes service offered by Amazon Web Services.
-  * **Infrastructure as Code (IaC) (Terraform)**: Managing and provisioning infrastructure through code instead of manual processes. **Terraform** is a leading IaC tool.
-  * **CI/CD Pipeline (Jenkins)**: **Continuous Integration (CI)** is the practice of merging all developers' working copies to a shared mainline several times a day. **Continuous Delivery (CD)** is the capability to deliver changes to production safely and quickly in a sustainable way. **Jenkins** is an open-source automation server that helps automate parts of the software development process, including building, testing, and deploying.
-  * **Continuous Delivery (ArgoCD)**: A declarative, GitOps continuous delivery tool for Kubernetes. It automates the deployment of desired application states in Kubernetes environments.
-  * **Monitoring (Prometheus & Grafana)**: Tools to observe and understand the performance and health of your application and infrastructure. **Prometheus** collects metrics, and **Grafana** visualizes them through dashboards.
+This sample microservice application has been built using these technologies:
+- NodeJS ([Express](http://expressjs.com/))
+- Java ([Spring Boot](https://spring.io/))
+- Python ([Flask](http://flask.pocoo.org))
+- Golang
+- PHP (Apache)
+- MongoDB
+- Redis
+- MySQL ([Maxmind](http://www.maxmind.com) data)
+- RabbitMQ
+- Nginx
+- AngularJS (1.x)
 
------
+The various services in the sample application already include all required Instana components installed and configured. The Instana components provide automatic instrumentation for complete end to end [tracing](https://docs.instana.io/core_concepts/tracing/), as well as complete visibility into time series metrics for all the technologies.
 
-## 2\. Setting Up Your Environment
+To see the application performance results in the Instana dashboard, you will first need an Instana account. Don't worry a [trial account](https://instana.com/trial?utm_source=github&utm_medium=robot_shop) is free.
 
-Before you begin, ensure you have the following installed and configured on your Linux machine:
+## Build from Source
+To optionally build from source (you will need a newish version of Docker to do this) use Docker Compose. Optionally edit the `.env` file to specify an alternative image registry and version tag; see the official [documentation](https://docs.docker.com/compose/env-file/) for more information.
 
-1.  **Linux Operating System**: You'll need a Linux distribution like Ubuntu, Fedora, or similar.
-2.  **Git**: For version control and interacting with GitHub.
-      * *Installation (Ubuntu/Debian)*: `sudo apt update && sudo apt install git`
-3.  **Docker**: To containerize your application components.
-      * *Follow the official Docker installation guide for your Linux distribution.*
-4.  **AWS CLI**: To interact with AWS services from your terminal.
-      * *Follow the official AWS CLI installation guide.*
-      * *Configure AWS CLI with your credentials*: `aws configure` (you'll need an AWS account with appropriate permissions).
-5.  **kubectl**: The Kubernetes command-line tool.
-      * *Follow the official Kubernetes documentation for kubectl installation.*
-6.  **eksctl**: A simple CLI tool for creating and managing EKS clusters.
-      * *Follow the official eksctl installation guide.*
-7.  **Terraform**: For infrastructure provisioning.
-      * *Follow the official Terraform installation guide.*
-8.  **NodeJS & npm/yarn**: To run the backend application.
-      * *Follow the official NodeJS installation guide.*
-9.  **Text Editor**: Visual Studio Code, Vim, Nano, etc.
+To download the tracing module for Nginx, it needs a valid Instana agent key. Set this in the environment before starting the build.
 
------
+```shell
+$ export INSTANA_AGENT_KEY="<your agent key>"
+```
 
-## 3\. Project Steps: End-to-End Deployment
+Now build all the images.
 
-The mega project involves several interconnected phases. We will break them down into actionable steps:
+```shell
+$ docker-compose build
+```
 
-### Phase 1: Infrastructure Provisioning with Terraform 🛠️
+If you modified the `.env` file and changed the image registry, you need to push the images to that registry
 
-This phase focuses on automatically setting up your AWS environment and the Kubernetes (EKS) cluster using Terraform.
+```shell
+$ docker-compose push
+```
 
-**Objective**: Reduce setup time by 30% using Terraform for AWS provisioning.
+## Run Locally
+You can run it locally for testing.
 
-1.  **Understand the Application Structure**: The project uses a three-tier application (ReactJS frontend, NodeJS backend, MongoDB database).
-    ```
-3.  **Set up Terraform Configuration**:
-      * Create Terraform configuration files (`.tf` files) that define your desired AWS infrastructure. This includes:
-          * **VPC (Virtual Private Cloud)**: Your isolated network on AWS.
-          * **Subnets**: Dividing your VPC into smaller networks (public and private).
-          * **Security Groups**: Virtual firewalls to control traffic to your resources.
-          * **AWS EKS Cluster**: The managed Kubernetes service.
-      * *Beginner Tip*: Start with a basic EKS Terraform module. You can find examples in the Terraform Registry.
-4.  **Initialize Terraform**:
-    ```bash
-    terraform init
-    ```
-5.  **Review the Plan**:
-    ```bash
-    terraform plan
-    ```
-    This command shows you what Terraform will create, change, or destroy. Review it carefully.
-6.  **Apply the Configuration**:
-    ```bash
-    terraform apply --auto-approve
-    ```
-    This will provision your AWS infrastructure, including the EKS cluster. This step can take a significant amount of time (20-30 minutes).
+If you did not build from source, don't worry all the images are on Docker Hub. Just pull down those images first using:
 
-### Phase 2: Containerization with Docker 📦
+```shell
+$ docker-compose pull
+```
 
-Once your EKS cluster is ready, you need to containerize your three-tier application components.
+Fire up Stan's Robot Shop with:
 
-1.  **Create Dockerfiles**: For each component (ReactJS frontend, NodeJS backend, MongoDB), you'll need a `Dockerfile`. These files contain instructions for building a Docker image.
-      * *ReactJS Frontend Example (simplified)*:
-        ```dockerfile
-        # Use a Node.js base image for building
-        FROM node:18-alpine as build
-        WORKDIR /app
-        COPY package*.json ./
-        RUN npm install
-        COPY . .
-        RUN npm run build
+```shell
+$ docker-compose up
+```
 
-        # Use a Nginx base image for serving the static files
-        FROM nginx:alpine
-        COPY --from=build /app/build /usr/share/nginx/html
-        EXPOSE 80
-        CMD ["nginx", "-g", "daemon off;"]
-        ```
-      * *NodeJS Backend Example (simplified)*:
-        ```dockerfile
-        FROM node:18-alpine
-        WORKDIR /app
-        COPY package*.json ./
-        RUN npm install
-        COPY . .
-        EXPOSE 3000
-        CMD ["node", "server.js"]
-        ```
-      * *MongoDB*: You'll typically use an official MongoDB Docker image.
-2.  **Build Docker Images**: Navigate to the directory of each component and build its Docker image.
-    ```bash
-    # For Frontend
-    docker build -t your-dockerhub-username/react-frontend:latest .
+If you want to fire up some load as well:
 
-    # For Backend
-    docker build -t your-dockerhub-username/nodejs-backend:latest .
-    ```
-3.  **Push Images to a Docker Registry**: You'll need a Docker registry (like Docker Hub or Amazon ECR) to store your images.
-    ```bash
-    docker login # (if using Docker Hub)
-    docker push your-dockerhub-username/react-frontend:latest
-    docker push your-dockerhub-username/nodejs-backend:latest
-    ```
+```shell
+$ docker-compose -f docker-compose.yaml -f docker-compose-load.yaml up
+```
 
-### Phase 3: CI/CD Pipeline with Jenkins and GitOps with ArgoCD 🚀
+If you are running it locally on a Linux host you can also run the Instana [agent](https://docs.instana.io/quick_start/agent_setup/container/docker/) locally, unfortunately the agent is currently not supported on Mac.
 
-This is the core automation part, achieving a 95% deployment success rate and cutting manual intervention by 80%.
+There is also only limited support on ARM architectures at the moment.
 
-1.  **Set up Jenkins**:
-      * Deploy Jenkins, ideally on an EC2 instance within your AWS VPC.
-      * Install necessary Jenkins plugins (e.g., Docker, Kubernetes, Git, Pipeline).
-      * Configure Jenkins credentials for AWS and Docker Hub/ECR.
-2.  **Create a Jenkins Pipeline**:
-      * Define a Jenkinsfile (Groovy script) in your application's GitHub repository. This file will orchestrate your CI/CD process.
-      * The pipeline should include stages for:
-          * **Cloning the repository**: `git clone`.
-          * **Building Docker images**: Using the Dockerfiles you created.
-          * **Pushing images to registry**: Your Docker Hub or Amazon ECR.
-          * **Triggering ArgoCD sync**: This is the GitOps part.
-3.  **Set up ArgoCD**:
-      * Install ArgoCD in your EKS cluster. This typically involves applying Kubernetes manifests.
-      * Connect ArgoCD to your application's GitHub repository (where your Kubernetes manifests will reside).
-4.  **Define Kubernetes Manifests**:
-      * Create Kubernetes YAML files (deployments, services, ingresses for ALB) for your ReactJS, NodeJS, and MongoDB components. These manifests declare the desired state of your application in the EKS cluster.
-      * Store these Kubernetes manifests in a separate Git repository (or a specific folder within your application repository) that ArgoCD will monitor.
-5.  **GitOps Workflow**:
-      * When a change is pushed to the Kubernetes manifests repository (e.g., a new Docker image version), ArgoCD will detect the change.
-      * ArgoCD will then automatically synchronize the EKS cluster's state to match the desired state defined in your Git repository.
-      * Jenkins, after building and pushing new Docker images, will update the image tags in your Kubernetes manifests in the Git repository, triggering ArgoCD.
-6.  **Configure AWS ALB (Application Load Balancer)**:
-      * Ensure your Kubernetes manifests define an Ingress resource that provisions and configures an AWS ALB to expose your frontend application to the internet.
-      * Integrate a domain with the AWS ALB for public accessibility.
+## Marathon / DCOS
 
-### Phase 4: Monitoring and Alerting with Prometheus and Grafana 📊
+The manifests for robotshop are in the *DCOS/* directory. These manifests were built using a fresh install of DCOS 1.11.0. They should work on a vanilla HA or single instance install.
 
-Improve issue detection time by 40%.
+You may install Instana via the DCOS package manager, instructions are here: https://github.com/dcos/examples/tree/master/instana-agent/1.9
 
-1.  **Deploy Prometheus**:
-      * Install Prometheus in your EKS cluster using Helm or Kubernetes manifests.
-      * Configure Prometheus to scrape metrics from your EKS cluster nodes, pods, and services.
-      * Integrate `cAdvisor` to collect detailed container metrics.
-2.  **Deploy Grafana**:
-      * Install Grafana in your EKS cluster.
-      * Connect Grafana to Prometheus as a data source.
-      * Create dashboards in Grafana to visualize key metrics like CPU usage, memory consumption, network traffic, and application-specific metrics. You can use pre-built dashboards or create custom ones.
-3.  **Configure Alerting**:
-      * Set up alerting rules in Prometheus to notify you via email (or other channels) in case of critical issues (e.g., high CPU usage, low memory, application errors).
-      * Integrate with a mailing service for notifications.
+## Kubernetes
+You can run Kubernetes locally using [minikube](https://github.com/kubernetes/minikube) or on one of the many cloud providers.
 
------
+The Docker container images are all available on [Docker Hub](https://hub.docker.com/u/robotshop/).
 
-## 4\. Key Achievements and Impact 🌟
+Install Stan's Robot Shop to your Kubernetes cluster using the [Helm](K8s/helm/README.md) chart.
 
-  * **Infrastructure Automation**: Reduced setup time by 30% using Terraform for AWS provisioning.
-  * **CI/CD Pipeline**: Achieved a 95% deployment success rate with zero downtime by implementing a Jenkins-driven CI/CD pipeline.
-  * **GitOps Integration**: Cut manual intervention by 80% through ArgoCD integration, ensuring seamless synchronization between GitHub and EKS.
-  * **Monitoring Setup**: Improved issue detection time by 40% with Prometheus and Grafana, enabling faster response to critical alerts.
+To deploy the Instana agent to Kubernetes, just use the [helm](https://github.com/instana/helm-charts) chart.
 
-This project will significantly enhance your operational efficiency and system reliability, delivering a 99.9% deployment success rate and reducing manual efforts by 90%.
+## Accessing the Store
+If you are running the store locally via *docker-compose up* then, the store front is available on localhost port 8080 [http://localhost:8080](http://localhost:8080/)
+
+If you are running the store on Kubernetes via minikube then, find the IP address of Minikube and the Node Port of the web service.
+
+```shell
+$ minikube ip
+$ kubectl get svc web
+```
+
+If you are using a cloud Kubernetes / Openshift / Mesosphere then it will be available on the load balancer of that system.
+
+## Load Generation
+A separate load generation utility is provided in the `load-gen` directory. This is not automatically run when the application is started. The load generator is built with Python and [Locust](https://locust.io). The `build.sh` script builds the Docker image, optionally taking *push* as the first argument to also push the image to the registry. The registry and tag settings are loaded from the `.env` file in the parent directory. The script `load-gen.sh` runs the image, it takes a number of command line arguments. You could run the container inside an orchestration system (K8s) as well if you want to, an example descriptor is provided in K8s directory. For End-user Monitoring ,load is not automatically generated but by navigating through the Robotshop from the browser .For more details see the [README](load-gen/README.md) in the load-gen directory.  
+
+## Website Monitoring / End-User Monitoring
+
+### Docker Compose
+
+To enable Website Monioring / End-User Monitoring (EUM) see the official [documentation](https://docs.instana.io/website_monitoring/) for how to create a configuration. There is no need to inject the JavaScript fragment into the page, this will be handled automatically. Just make a note of the unique key and set the environment variable `INSTANA_EUM_KEY` and `INSTANA_EUM_REPORTING_URL` for the web image within `docker-compose.yaml`.
+
+### Kubernetes
+
+The Helm chart for installing Stan's Robot Shop supports setting the key and endpoint url required for website monitoring, see the [README](K8s/helm/README.md).
+
+## Prometheus
+
+The cart and payment services both have Prometheus metric endpoints. These are accessible on `/metrics`. The cart service provides:
+
+* Counter of the number of items added to the cart
+
+The payment services provides:
+
+* Counter of the number of items perchased
+* Histogram of the total number of items in each cart
+* Histogram of the total value of each cart
+
+To test the metrics use:
+
+```shell
+$ curl http://<host>:8080/api/cart/metrics
+$ curl http://<host>:8080/api/payment/metrics
+```
+
